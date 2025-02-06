@@ -1,10 +1,11 @@
 import random
 import numpy as np
 from tqdm import tqdm_notebook
-from utils import tools, common
-from algorithm import neighbor_operator, local_search
+from utils import solution_handler, validate
+from algorithm import local_search, random_solution
 from algorithm.base import Algorithm
 from datetime import datetime
+
 
 class BeeColony(Algorithm):
     """
@@ -62,8 +63,8 @@ class BeeColony(Algorithm):
         Returns:
             float: Giá trị độ thích hợp (càng lớn càng tốt)
         """
-        cost = common.compute_solution(problem, solution)
-        demands = common.get_routes_demand(problem, solution)
+        cost = validate.compute_solution(problem, solution)
+        demands = validate.get_routes_demand(problem, solution)
         capacity_violation = max(demands) - problem['capacity']
         length_violation = 0  # Có thể thêm ràng buộc về độ dài tuyến đường
         
@@ -84,7 +85,7 @@ class BeeColony(Algorithm):
         # Khởi tạo công cụ tìm kiếm
         searchers = {
             'local': local_search.LocalSearch(self.problem),
-            'neighbor': neighbor_operator.NeighborOperator()
+            'neighbor': local_search.NeighborOperator()
         }
 
         # Vòng lặp chính của thuật toán
@@ -131,7 +132,7 @@ class BeeColony(Algorithm):
     def _initialize_population(self, gen_alpha, gen_betta):
         """Khởi tạo quần thể giải pháp ban đầu."""
         solutions = [
-            common.generate_solution(
+            random_solution.generate_solution(
                 self.problem,
                 alpha=gen_alpha,
                 betta=gen_betta,
@@ -176,7 +177,7 @@ class BeeColony(Algorithm):
             
             # Tìm giải pháp hàng xóm
             neighbor = neighbor_gen.random_operator(solution, patience=20)
-            if not common.check_capacity_criteria(self.problem, neighbor):
+            if not validate.check_capacity_criteria(self.problem, neighbor):
                 continue
                 
             # Đánh giá giải pháp mới
@@ -195,16 +196,25 @@ class BeeColony(Algorithm):
         }
 
     def _scout_bee_search(self, solutions, counters, neighbor_gen):
-        """Ong trinh sát thay thế các giải pháp không cải thiện."""
+        """Ong trinh sát thay thế các giải pháp không cải thiện bằng lời giải mới tốt hơn."""
         for i, count in enumerate(counters):
             if count >= self.search_limit:
-                solutions[i] = neighbor_gen.random_operator(solutions[i], patience=10)
+                # Tạo lời giải mới hoàn toàn
+                new_solution = random_solution.generate_solution(self.problem, alpha=1.0, betta=0.5, patience=100)
+                new_cost = validate.compute_solution(self.problem, new_solution)  # Tính cost của lời giải mới
+                old_cost = validate.compute_solution(self.problem, solutions[i])  # Tính cost của lời giải cũ
+
+                # Nếu lời giải mới có chi phí nhỏ hơn, thay thế lời giải cũ
+                if new_cost < old_cost:
+                    solutions[i] = new_solution
+                    counters[i] = 0  # Reset bộ đếm tìm kiếm
+
         return solutions
 
     def _adjust_parameters(self, solutions, alpha, delta):
         """Điều chỉnh tham số alpha dựa trên tỷ lệ giải pháp hợp lệ."""
         valid_solutions = sum(1 for s in solutions 
-                            if common.check_capacity_criteria(self.problem, s))
+                            if validate.check_capacity_criteria(self.problem, s))
         return alpha - delta if valid_solutions > len(solutions)/2 else alpha + delta
 
     def _update_history(self, fitnesses, alpha):
@@ -216,7 +226,7 @@ class BeeColony(Algorithm):
         """Tìm giải pháp tốt nhất từ quần thể cuối cùng."""
         while solutions:
             best_idx = np.argmax(fitnesses)
-            if common.check_solution(self.problem, solutions[best_idx]):
+            if validate.check_solution(self.problem, solutions[best_idx]):
                 return solutions[best_idx]
             
             del solutions[best_idx]

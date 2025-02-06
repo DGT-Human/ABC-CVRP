@@ -1,52 +1,9 @@
 import random
 import numpy as np
 import pandas as pd
-
 from copy import copy
 from datetime import datetime
 from tqdm import tqdm, tqdm_notebook
-
-
-def generate_solution(problem,
-                      alpha=1.0,
-                      betta=0.5,
-                      patience=50,
-                      verbose=False) -> np.ndarray:
-    MAXIMUM_PENALTY = 10000000
-    dists   = problem['dists']
-    demands = problem['demands']
-
-    for itr in range(patience):
-
-        i_loc   = [i for i in range(1, problem['n_locations'])]
-        routes  = [[0] for _ in range(problem['n_trucks'])]
-
-        for i in range(len(i_loc)):
-            route_dists = []
-            random_loc  = random.choice(i_loc)
-            for route in routes: 
-                dist_to_loc  = dists[route[-1]][random_loc]
-                route_demand = sum([demands[i] for i in route]) + demands[random_loc]
-                if  route_demand > problem['capacity']:
-                    coef = MAXIMUM_PENALTY
-                else:
-                    coef =   alpha * i * len(route) + \
-                             betta * max(0, route_demand-problem['capacity']) + \
-                             dist_to_loc
-                route_dists.append(coef)
-
-            routes[np.argmin(route_dists)].append(random_loc)
-            i_loc.remove(random_loc)
-
-        solution = [loc for route in routes for loc in route]
-        solution.append(0)
-        solution = np.array(solution, dtype=np.int32)
-
-        if check_depots_sanity(solution):
-            if check_capacity_criteria(problem, solution):
-                break
-    return solution
-
 
 def compute_solution(problem, solution) -> np.float32:
     # compute solution cost
