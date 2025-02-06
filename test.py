@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from datetime import datetime
-import utils.tools as tools
-import utils.common as common
+import utils.solution_handler as tools
+import utils.validate as common
 import algorithm.bee_colony as bee_colony
 import utils.visualize as visualize
 from tqdm import tqdm
 import glob
 import os
+from algorithm import random_solution
 
 class VRPGUI:
     def __init__(self, root):
@@ -174,7 +175,7 @@ class VRPGUI:
             messagebox.showerror("Error", "Please load a benchmark first!")
             return
 
-        self.initial_solution = common.generate_solution(self.problem, alpha=0.01, betta=50, verbose=False)
+        self.initial_solution = random_solution.generate_solution(self.problem, alpha=0.01, betta=50, verbose=False)
         initial_cost = common.compute_solution(self.problem, self.initial_solution)
         is_feasible = common.check_solution(self.problem, self.initial_solution)
 
