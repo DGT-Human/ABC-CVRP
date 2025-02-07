@@ -81,7 +81,7 @@ class VRPGUI:
 
         # Parameters entries
         ttk.Label(param_frame, text="Number of Epochs:").grid(row=0, column=0, padx=5, pady=2)
-        self.epochs_var = tk.StringVar(value="200")
+        self.epochs_var = tk.StringVar(value="400")
         ttk.Entry(param_frame, textvariable=self.epochs_var).grid(row=0, column=1, padx=5, pady=2)
 
         ttk.Label(param_frame, text="Number of Initial Solutions:").grid(row=1, column=0, padx=5, pady=2)
@@ -93,7 +93,7 @@ class VRPGUI:
         ttk.Entry(param_frame, textvariable=self.onlookers_var).grid(row=2, column=1, padx=5, pady=2)
 
         ttk.Label(param_frame, text="Search Limit:").grid(row=3, column=0, padx=5, pady=2)
-        self.search_limit_var = tk.StringVar(value="50")
+        self.search_limit_var = tk.StringVar(value="100")
         ttk.Entry(param_frame, textvariable=self.search_limit_var).grid(row=3, column=1, padx=5, pady=2)
 
         # Solve button
@@ -180,7 +180,7 @@ class VRPGUI:
             messagebox.showerror("Error", "Please load a benchmark first!")
             return
 
-        self.initial_solution = random_solution.generate_solution(self.problem, alpha=0.01, betta=50, verbose=False)
+        self.initial_solution = random_solution.generate_solution(self.problem, verbose=False)
         initial_cost = common.compute_solution(self.problem, self.initial_solution)
         is_feasible = common.check_solution(self.problem, self.initial_solution)
 
@@ -227,7 +227,7 @@ class VRPGUI:
 
             # Solve
             start_time = datetime.now()
-            self.abc_solution = ABC.solve(alpha=0.1, gen_alpha=0.01, gen_betta=25, callback=update_progress)
+            self.abc_solution = ABC.solve(callback=update_progress)
             solve_time = (datetime.now() - start_time).total_seconds()
 
             # Close progress window
@@ -397,10 +397,7 @@ class VRPGUI:
             )
 
             start_time = datetime.now()
-            alpha = problem["n_locations"] / 100
-            gen_alpha = 0.5
-            gen_betta = problem["n_locations"]
-            abc_solution = ABC.solve(alpha=alpha, gen_betta=gen_betta)
+            abc_solution = ABC.solve()
             end_time = (datetime.now() - start_time).total_seconds()
 
             abc_cost = common.compute_solution(problem, abc_solution)
@@ -409,7 +406,6 @@ class VRPGUI:
 
             self.load_info_text.insert(tk.END,
                                        f"epoch: {ABC.n_epoch} initials: {ABC.n_initials} search_limit: {ABC.search_limit}\n")
-            self.load_info_text.insert(tk.END, f"{alpha:.2f} {gen_betta:.2f}\n\n")
             self.load_info_text.update_idletasks()
 
             info_dict["benchmark"].append(bench_name)
