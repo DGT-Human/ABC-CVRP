@@ -1,11 +1,9 @@
 import random
 import numpy as np
-from utils import validate 
+from utils import validate
 
 
 def generate_solution(problem,
-                      alpha=1.0,
-                      betta=0.5,
                       patience=50,
                       verbose=False) -> np.ndarray:
     MAXIMUM_PENALTY = 10000000
@@ -26,9 +24,7 @@ def generate_solution(problem,
                 if  route_demand > problem['capacity']:
                     coef = MAXIMUM_PENALTY
                 else:
-                    coef =   alpha * i * len(route) + \
-                             betta * max(0, route_demand-problem['capacity']) + \
-                             dist_to_loc
+                    coef = i * len(route) + dist_to_loc
                 route_dists.append(coef)
 
             routes[np.argmin(route_dists)].append(random_loc)

@@ -28,7 +28,6 @@ class BeeColony(Algorithm):
         """
         self.problem = problem
         self.history = []          # Lưu lịch sử độ thích hợp
-        self.history_alpha = []    # Lưu lịch sử hệ số alpha
         
     @property
     def name(self):
@@ -50,32 +49,28 @@ class BeeColony(Algorithm):
         self.search_limit = search_limit
 
     @staticmethod
-    def fitness(problem, solution, alpha=0.5, betta=0.5):
+    def fitness(problem, solution):
         """
         Tính độ thích hợp của một giải pháp.
-        
+
         Args:
             problem (dict): Bài toán cần giải quyết
             solution (list): Giải pháp cần đánh giá
-            alpha (float): Hệ số phạt cho việc vượt quá sức chứa
-            betta (float): Hệ số phạt cho việc vượt quá độ dài tuyến đường
-            
+
         Returns:
             float: Giá trị độ thích hợp (càng lớn càng tốt)
         """
         cost = validate.compute_solution(problem, solution)
         demands = validate.get_routes_demand(problem, solution)
         capacity_violation = max(demands) - problem['capacity']
-        length_violation = 0  # Có thể thêm ràng buộc về độ dài tuyến đường
-        
-        # Công thức tính độ thích hợp với các hệ số phạt
-        return 1 / (cost + alpha * capacity_violation + betta * length_violation)
+
+        return 1 / (cost + capacity_violation)
 
     from datetime import datetime
 
-    def solve(self, alpha=0.2, betta=0.2, gen_alpha=1, gen_betta=0.5, callback=None):
+    def solve(self, callback=None):
         # Khởi tạo quần thể
-        population = self._initialize_population(gen_alpha, gen_betta)
+        population = self._initialize_population()
 
         # Đánh giá quần thể ban đầu
         solutions = population['solutions']
@@ -90,12 +85,13 @@ class BeeColony(Algorithm):
 
         # Vòng lặp chính của thuật toán
         start_time = datetime.now()
+        no_improve_count = 0  # Đếm số vòng lặp không cải thiện
+        best_fitness = max(fitnesses)
         for itr in range(self.n_epoch):
             # Giai đoạn ong thợ
             for i, solution in enumerate(solutions):
-                new_solution = self._employed_bee_search(
-                    solution, fitnesses[i], searchers['local'], alpha, betta
-                )
+                new_solution = self._employed_bee_search(solution, fitnesses[i], searchers['local'])
+
                 if new_solution['improved']:
                     solutions[i] = new_solution['solution']
                     fitnesses[i] = new_solution['fitness']
@@ -104,17 +100,26 @@ class BeeColony(Algorithm):
                     counters[i] += 1
 
             # Giai đoạn ong quan sát
-            onlooker_results = self._onlooker_bee_search(
-                solutions, fitnesses, counters, searchers['neighbor'], alpha, betta
-            )
+            onlooker_results = self._onlooker_bee_search(solutions, fitnesses, counters, searchers['neighbor'])
+
             solutions = onlooker_results['solutions']
             fitnesses = onlooker_results['fitnesses']
             counters = onlooker_results['counters']
 
             # Giai đoạn ong trinh sát
-            solutions = self._scout_bee_search(
-                solutions, counters, searchers['neighbor']
-            )
+            solutions = self._scout_bee_search(solutions, counters, searchers['neighbor'])
+
+            current_best_fitness = max(fitnesses)
+            if current_best_fitness <= best_fitness:
+                no_improve_count += 1
+            else:
+                best_fitness = current_best_fitness
+                no_improve_count = 0  # Reset nếu có cải thiện
+
+            if no_improve_count >= 200:
+                print(f"Stopping early at iteration {itr} due to no improvement after 200 searches.")
+                break
+
 
             # Gọi hàm callback nếu được cung cấp
             if callback:
@@ -125,19 +130,17 @@ class BeeColony(Algorithm):
         # Trả về giải pháp tốt nhất
         return self._get_best_solution(solutions, fitnesses)
 
-    def _initialize_population(self, gen_alpha, gen_betta):
+    def _initialize_population(self):
         """Khởi tạo quần thể giải pháp ban đầu."""
         solutions = [
             random_solution.generate_solution(
                 self.problem,
-                alpha=gen_alpha,
-                betta=gen_betta,
                 patience=100
             ) for _ in range(self.n_initials)
         ]
         
         fitnesses = [
-            self.fitness(self.problem, solution, alpha=gen_alpha, betta=gen_betta)
+            self.fitness(self.problem, solution)
             for solution in solutions
         ]
         
@@ -146,11 +149,11 @@ class BeeColony(Algorithm):
             'fitnesses': fitnesses
         }
 
-    def _employed_bee_search(self, solution, current_fitness, searcher, alpha, betta):
+    def _employed_bee_search(self, solution, current_fitness, searcher):
         """Ong thợ tìm kiếm cải thiện cho một giải pháp."""
         searcher.set_params(solution, n_iter=12)
         neighbor, _ = searcher.solve(only_feasible=True)
-        neighbor_fitness = self.fitness(self.problem, neighbor, alpha=alpha, betta=betta)
+        neighbor_fitness = self.fitness(self.problem, neighbor)
         
         improved = neighbor_fitness > current_fitness
         return {
@@ -159,7 +162,7 @@ class BeeColony(Algorithm):
             'improved': improved
         }
 
-    def _onlooker_bee_search(self, solutions, fitnesses, counters, neighbor_gen, alpha, betta):
+    def _onlooker_bee_search(self, solutions, fitnesses, counters, neighbor_gen):
         """Ong quan sát tập trung tìm kiếm ở vùng có giải pháp tốt."""
         # Tính xác suất chọn mỗi giải pháp
         total_fitness = sum(fitnesses)
@@ -177,7 +180,7 @@ class BeeColony(Algorithm):
                 continue
                 
             # Đánh giá giải pháp mới
-            neighbor_fitness = self.fitness(self.problem, neighbor, alpha=alpha, betta=betta)
+            neighbor_fitness = self.fitness(self.problem, neighbor)
             if neighbor_fitness > fitnesses[chosen_idx]:
                 solutions[chosen_idx] = neighbor
                 fitnesses[chosen_idx] = neighbor_fitness
@@ -196,7 +199,7 @@ class BeeColony(Algorithm):
         for i, count in enumerate(counters):
             if count >= self.search_limit:
                 # Tạo lời giải mới hoàn toàn
-                new_solution = random_solution.generate_solution(self.problem, alpha=1.0, betta=0.5, patience=100)
+                new_solution = random_solution.generate_solution(self.problem, patience=100)
                 new_cost = validate.compute_solution(self.problem, new_solution)  # Tính cost của lời giải mới
                 old_cost = validate.compute_solution(self.problem, solutions[i])  # Tính cost của lời giải cũ
 
