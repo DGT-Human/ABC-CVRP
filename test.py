@@ -51,6 +51,7 @@ class VRPGUI:
         self.create_benchmark_tab()
         self.create_load_info_tab()
 
+
     def create_input_frame(self):
         # Input Frame
         input_frame = ttk.LabelFrame(self.main_frame, text="Input", padding="5")
@@ -96,7 +97,11 @@ class VRPGUI:
         ttk.Entry(param_frame, textvariable=self.search_limit_var).grid(row=3, column=1, padx=5, pady=2)
 
         # Solve button
-        ttk.Button(param_frame, text="Solve VRP", command=self.solve_vrp).grid(row=4, column=0, columnspan=2, pady=10)
+        ttk.Button(param_frame, text="Solve VRP", command=self.solve_vrp).grid(row=4, column=0, pady=10)
+        ttk.Button(param_frame, text="Test Optimization", command=self.prompt_test_parameters).grid(row=4, column=1,
+                                                                                                    pady=10)
+        ttk.Button(param_frame, text="Check Stability", command=self.prompt_stability_test).grid(row=5, column=0, columnspan=2, pady=10)
+
 
     def create_output_frame(self):
         # Output Frame
@@ -222,7 +227,7 @@ class VRPGUI:
 
             # Solve
             start_time = datetime.now()
-            self.abc_solution = ABC.solve(alpha=0.1, delta=0.01, gen_alpha=0.01, gen_betta=25, callback=update_progress)
+            self.abc_solution = ABC.solve(alpha=0.1, gen_alpha=0.01, gen_betta=25, callback=update_progress)
             solve_time = (datetime.now() - start_time).total_seconds()
 
             # Close progress window
@@ -288,13 +293,13 @@ class VRPGUI:
                                                                                           pady=2)
 
         ttk.Label(input_frame, text="Number of Epochs:").grid(row=1, column=0, padx=2, pady=2, sticky=tk.W)
-        self.epochs_var = tk.StringVar(value="300")
-        ttk.Entry(input_frame, textvariable=self.epochs_var, width=10).grid(row=1, column=1, padx=2, pady=2,
-                                                                            sticky=tk.W)
+        self.benchmark_epochs_var = tk.StringVar(value="300")
+        ttk.Entry(input_frame, textvariable=self.benchmark_epochs_var, width=10).grid(row=1, column=1, padx=2, pady=2,
+                                                                                      sticky=tk.W)
 
         ttk.Label(input_frame, text="Number of Onlookers:").grid(row=2, column=0, padx=2, pady=2, sticky=tk.W)
-        self.onlookers_var = tk.StringVar(value="5")
-        ttk.Entry(input_frame, textvariable=self.onlookers_var, width=10).grid(row=2, column=1, padx=2, pady=2,
+        self.benchmark_onlookers_var = tk.StringVar(value="5")
+        ttk.Entry(input_frame, textvariable=self.benchmark_onlookers_var, width=10).grid(row=2, column=1, padx=2, pady=2,
                                                                                sticky=tk.W)
 
         # Run button with reduced padding
@@ -336,8 +341,8 @@ class VRPGUI:
 
     def run_benchmark(self):
         benchmark_folder = self.benchmark_folder_var.get()
-        n_epochs = int(self.epochs_var.get())
-        n_onlookers = int(self.onlookers_var.get())
+        n_epochs = int(self.benchmark_epochs_var.get())
+        n_onlookers = int(self.benchmark_onlookers_var.get())
 
         benchmark_files = glob.glob(f"{benchmark_folder}/*.vrp")
 
@@ -393,10 +398,9 @@ class VRPGUI:
 
             start_time = datetime.now()
             alpha = problem["n_locations"] / 100
-            delta = 0.01
             gen_alpha = 0.5
             gen_betta = problem["n_locations"]
-            abc_solution = ABC.solve(alpha=alpha, delta=delta, gen_betta=gen_betta)
+            abc_solution = ABC.solve(alpha=alpha, gen_betta=gen_betta)
             end_time = (datetime.now() - start_time).total_seconds()
 
             abc_cost = common.compute_solution(problem, abc_solution)
@@ -405,7 +409,7 @@ class VRPGUI:
 
             self.load_info_text.insert(tk.END,
                                        f"epoch: {ABC.n_epoch} initials: {ABC.n_initials} search_limit: {ABC.search_limit}\n")
-            self.load_info_text.insert(tk.END, f"{alpha:.2f} {delta:.2f} {gen_betta:.2f}\n\n")
+            self.load_info_text.insert(tk.END, f"{alpha:.2f} {gen_betta:.2f}\n\n")
             self.load_info_text.update_idletasks()
 
             info_dict["benchmark"].append(bench_name)
@@ -607,6 +611,116 @@ class VRPGUI:
                 routes_text.insert(tk.END, f"\nTotal Cost: {cost}")
 
             routes_text.config(state='disabled')
+
+    def prompt_test_parameters(self):
+        self.test_window = tk.Toplevel(self.root)
+        self.test_window.title("Test Parameters")
+
+        ttk.Label(self.test_window, text="Start Epochs:").grid(row=0, column=0, padx=5, pady=5)
+        self.start_epochs_var = tk.StringVar(value="50")
+        ttk.Entry(self.test_window, textvariable=self.start_epochs_var).grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Label(self.test_window, text="End Epochs:").grid(row=1, column=0, padx=5, pady=5)
+        self.end_epochs_var = tk.StringVar(value="1000")
+        ttk.Entry(self.test_window, textvariable=self.end_epochs_var).grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Label(self.test_window, text="Step:").grid(row=2, column=0, padx=5, pady=5)
+        self.step_epochs_var = tk.StringVar(value="50")
+        ttk.Entry(self.test_window, textvariable=self.step_epochs_var).grid(row=2, column=1, padx=5, pady=5)
+
+        ttk.Button(self.test_window, text="Run Test", command=self.run_test_optimization).grid(row=3, column=0,
+                                                                                               columnspan=2, pady=10)
+
+    def run_test_optimization(self):
+        self.test_window.destroy()
+        if self.problem is None:
+            messagebox.showerror("Error", "Please load a benchmark first!")
+            return
+
+        start_epochs = int(self.start_epochs_var.get())
+        end_epochs = int(self.end_epochs_var.get())
+        step_epochs = int(self.step_epochs_var.get())
+
+        results = []
+        for n_epoch in range(start_epochs, end_epochs + 1, step_epochs):
+            self.epochs_var.set(str(n_epoch))
+            self.solve_vrp()
+
+            abc_cost = float(self.abc_cost_label.cget("text").split(":")[-1])
+            abc_time = float(self.abc_time_label.cget("text").split(":")[-1].replace("s", ""))
+
+            results.append((n_epoch, abc_cost, abc_time))
+
+        self.show_chart_window(results)
+
+    def show_chart_window(self, results):
+        chart_window = tk.Toplevel(self.root)
+        chart_window.title("Optimization Results")
+
+        fig, axs = plt.subplots(2, 1, figsize=(8, 6))
+        epochs, costs, times = zip(*results)
+
+        axs[0].plot(epochs, costs, marker='o', linestyle='-', label='ABC Cost')
+        axs[0].set_xlabel("Epochs")
+        axs[0].set_ylabel("ABC Cost")
+        axs[0].set_title("Cost Optimization Over Epochs")
+        axs[0].legend()
+
+        axs[1].plot(epochs, times, marker='s', linestyle='-', color='red', label='ABC Time (s)')
+        axs[1].set_xlabel("Epochs")
+        axs[1].set_ylabel("Time (s)")
+        axs[1].set_title("Execution Time Over Epochs")
+        axs[1].legend()
+
+        canvas = FigureCanvasTkAgg(fig, master=chart_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def prompt_stability_test(self):
+        self.stability_window = tk.Toplevel(self.root)
+        self.stability_window.title("Stability Test Parameters")
+
+        ttk.Label(self.stability_window, text="Number of Runs:").grid(row=0, column=0, padx=5, pady=5)
+        self.num_runs_var = tk.StringVar(value="10")
+        ttk.Entry(self.stability_window, textvariable=self.num_runs_var).grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Button(self.stability_window, text="Run Test", command=self.run_stability_test).grid(row=1, column=0,
+                                                                                                 columnspan=2, pady=10)
+
+    def run_stability_test(self):
+        self.stability_window.destroy()
+        if self.problem is None:
+            messagebox.showerror("Error", "Please load a benchmark first!")
+            return
+
+        num_runs = int(self.num_runs_var.get())
+        results = []
+
+        for _ in range(num_runs):
+            self.solve_vrp()
+            abc_cost = float(self.abc_cost_label.cget("text").split(":")[-1])
+            results.append(abc_cost)
+
+        self.show_stability_line_chart(results)
+
+    def show_stability_line_chart(self, results):
+        stability_window = tk.Toplevel(self.root)
+        stability_window.title("Stability Test Results")
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(range(1, len(results) + 1), results, marker='o', linestyle='-', color='b', label='ABC Cost')
+        mean_value = np.mean(results)
+        ax.axhline(mean_value, color='r', linestyle='--', label=f'Mean: {mean_value:.2f}')
+
+        ax.set_title("ABC Cost Stability Analysis")
+        ax.set_xlabel("Run Number")
+        ax.set_ylabel("ABC Cost")
+        ax.legend()
+
+        canvas = FigureCanvasTkAgg(fig, master=stability_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
