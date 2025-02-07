@@ -73,7 +73,7 @@ class BeeColony(Algorithm):
 
     from datetime import datetime
 
-    def solve(self, alpha=0.2, betta=0.2, delta=0.01, gen_alpha=1, gen_betta=0.5, callback=None):
+    def solve(self, alpha=0.2, betta=0.2, gen_alpha=1, gen_betta=0.5, callback=None):
         # Khởi tạo quần thể
         population = self._initialize_population(gen_alpha, gen_betta)
 
@@ -115,10 +115,6 @@ class BeeColony(Algorithm):
             solutions = self._scout_bee_search(
                 solutions, counters, searchers['neighbor']
             )
-
-            # Điều chỉnh tham số và cập nhật lịch sử
-            # alpha = self._adjust_parameters(solutions, alpha, delta)
-            self._update_history(fitnesses, alpha)
 
             # Gọi hàm callback nếu được cung cấp
             if callback:
@@ -210,17 +206,6 @@ class BeeColony(Algorithm):
                     counters[i] = 0  # Reset bộ đếm tìm kiếm
 
         return solutions
-
-    def _adjust_parameters(self, solutions, alpha, delta):
-        """Điều chỉnh tham số alpha dựa trên tỷ lệ giải pháp hợp lệ."""
-        valid_solutions = sum(1 for s in solutions 
-                            if validate.check_capacity_criteria(self.problem, s))
-        return alpha - delta if valid_solutions > len(solutions)/2 else alpha + delta
-
-    def _update_history(self, fitnesses, alpha):
-        """Cập nhật lịch sử tối ưu."""
-        self.history.append(1 / np.mean(fitnesses))
-        self.history_alpha.append(alpha)
 
     def _get_best_solution(self, solutions, fitnesses):
         """Tìm giải pháp tốt nhất từ quần thể cuối cùng."""
