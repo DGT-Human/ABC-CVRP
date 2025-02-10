@@ -49,7 +49,7 @@ class BeeColony(Algorithm):
         self.search_limit = search_limit
 
     @staticmethod
-    def fitness(problem, solution):
+    def fitness(problem, solution, P=10):
         """
         Tính độ thích hợp của một giải pháp.
 
@@ -62,11 +62,11 @@ class BeeColony(Algorithm):
         """
         cost = validate.compute_solution(problem, solution)
         demands = validate.get_routes_demand(problem, solution)
-        capacity_violation = max(demands) - problem['capacity']
+        capacity_violation = max(0, max(demands) - problem['capacity'])
 
-        return 1 / (cost + capacity_violation)
+        return 1 / (cost + capacity_violation * P)
 
-    from datetime import datetime
+
 
     def solve(self, callback=None):
         # Khởi tạo quần thể
@@ -167,7 +167,11 @@ class BeeColony(Algorithm):
         # Tính xác suất chọn mỗi giải pháp
         total_fitness = sum(fitnesses)
         probabilities = [fit/total_fitness for fit in fitnesses]
-        
+
+        # Đảm bảo tổng xác suất là 1
+        probabilities = np.array(probabilities)
+        probabilities = probabilities / probabilities.sum()  # Chuẩn hóa xác suất
+
         # Với mỗi ong quan sát
         for _ in range(self.n_onlookers):
             # Chọn giải pháp dựa trên xác suất

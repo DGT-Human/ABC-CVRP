@@ -21,13 +21,16 @@ def generate_solution(problem,
             for route in routes:
                 dist_to_loc  = dists[route[-1]][random_loc]
                 route_demand = sum([demands[i] for i in route]) + demands[random_loc]
-                if  route_demand > problem['capacity']:
-                    coef = MAXIMUM_PENALTY
-                else:
-                    coef = i * len(route) + dist_to_loc
+                demand_penalty = max(0, route_demand - problem['capacity'])
+                P = 10
+                # if  route_demand > problem['capacity']:
+                #     coef = MAXIMUM_PENALTY
+                # else:
+                coef = len(route) * 2 + dist_to_loc + demand_penalty * P   # tính xác suất chọn mỗi tuyến đường
+                # (số lượng điểm * 2 + khoảng cách điểm cuối với điểm muốn thêm + vượt quá tài trọng * 10)
                 route_dists.append(coef)
 
-            routes[np.argmin(route_dists)].append(random_loc)
+            routes[np.argmin(route_dists)].append(random_loc) # chọn route (tuyến) có coef nhỏ nhất
             i_loc.remove(random_loc)
 
         solution = [loc for route in routes for loc in route]

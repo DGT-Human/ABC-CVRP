@@ -85,7 +85,7 @@ class VRPGUI:
         ttk.Entry(param_frame, textvariable=self.epochs_var).grid(row=0, column=1, padx=5, pady=2)
 
         ttk.Label(param_frame, text="Number of Initial Solutions:").grid(row=1, column=0, padx=5, pady=2)
-        self.initials_var = tk.StringVar(value="30")
+        self.initials_var = tk.StringVar(value="40")
         ttk.Entry(param_frame, textvariable=self.initials_var).grid(row=1, column=1, padx=5, pady=2)
 
         ttk.Label(param_frame, text="Number of Onlookers:").grid(row=2, column=0, padx=5, pady=2)
@@ -93,7 +93,7 @@ class VRPGUI:
         ttk.Entry(param_frame, textvariable=self.onlookers_var).grid(row=2, column=1, padx=5, pady=2)
 
         ttk.Label(param_frame, text="Search Limit:").grid(row=3, column=0, padx=5, pady=2)
-        self.search_limit_var = tk.StringVar(value="100")
+        self.search_limit_var = tk.StringVar(value="10")
         ttk.Entry(param_frame, textvariable=self.search_limit_var).grid(row=3, column=1, padx=5, pady=2)
 
         # Solve button
