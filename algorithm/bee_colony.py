@@ -66,10 +66,6 @@ class BeeColony(Algorithm):
 
         return 1 / (cost + capacity_violation * P)
 
-    # cost là tổng hệ số chi phí
-    # demands là tổng hệ số nhu cầu
-    # P là hệ số phạt
-    # capacity_violation là hệ số phạt cho sức chứa, ví dụ: nếu âm thì bằng 0, nếu dương thì capacity_violation * P -> phạt
 
 
     def solve(self, callback=None):
