@@ -10,43 +10,67 @@ from algorithm.base import Algorithm
 # neighbor_operator = imp.reload(neighbor_operator)
 
 class LocalSearch(Algorithm):
-
     def __init__(self, problem):
+        """
+        Khởi tạo thuật toán tìm kiếm cục bộ với một bài toán cụ thể.
+        :param problem: Đối tượng bài toán cần tối ưu hóa.
+        """
         self.problem = problem
 
     @property
     def name(self):
+        """
+        Trả về tên thuật toán.
+        """
         return 'LocalSearch'
 
-
+    # Thiết lập các tham số cho thuật toán
     def set_params(self, solution, n_iter, **params):
-        self.solution = copy(solution)
-        self.n_iter   = n_iter
-        self.params   = params
+        """
+        Thiết lập các tham số cho quá trình tìm kiếm cục bộ.
+        :param solution: Giải pháp ban đầu.
+        :param n_iter: Số lần lặp để tìm kiếm giải pháp tốt hơn.
+        :param params: Các tham số khác có thể được sử dụng.
+        """
+        self.solution = copy(solution)  # Sao chép giải pháp ban đầu để không làm thay đổi bản gốc
+        self.n_iter = n_iter  # Số lần lặp
+        self.params = params  # Lưu trữ các tham số bổ sung
 
-
+    # Hàm giải bài toán bằng thuật toán tìm kiếm cục bộ
     def solve(self, only_feasible=True, verbose=False):
+        """
+        Thực hiện tìm kiếm cục bộ để tối ưu hóa giải pháp.
+        :param only_feasible: Nếu True, chỉ chấp nhận giải pháp hợp lệ.
+        :param verbose: Nếu True, in ra thông tin trong quá trình tìm kiếm.
+        :return: Giải pháp tối ưu và chi phí tương ứng.
+        """
+        # Tính toán chi phí của giải pháp ban đầu
         self.cur_cost = validate.compute_solution(self.problem, self.solution)
         if verbose:
             print('Start cost: {}'.format(self.cur_cost))
 
-        feasible_saving = copy(self.solution)
-        operator = NeighborOperator()
+        feasible_saving = copy(self.solution)  # Lưu trữ giải pháp hợp lệ tốt nhất
+        operator = NeighborOperator()  # Tạo đối tượng thực hiện các phép toán láng giềng
 
+        # Thực hiện n_iter lần tìm kiếm cục bộ
         for _ in tqdm(range(self.n_iter), disable=(not verbose)):
-            tmp_sol = operator.random_operator(self.solution)
-            cost = validate.compute_solution(self.problem, tmp_sol)
+            tmp_sol = operator.random_operator(self.solution)  # Tạo giải pháp láng giềng ngẫu nhiên
+            cost = validate.compute_solution(self.problem, tmp_sol)  # Tính toán chi phí của giải pháp mới
+
+            # Nếu chi phí mới nhỏ hơn hoặc bằng chi phí hiện tại, cập nhật giải pháp
             if self.cur_cost >= cost:
                 self.cur_cost = cost
                 self.solution = tmp_sol
+                # Kiểm tra xem giải pháp có hợp lệ không
                 if validate.check_solution(self.problem, self.solution):
                     feasible_saving = copy(self.solution)
 
-        if ((only_feasible) and
-            (not validate.check_solution(self.problem, self.solution))):
+        # Nếu chỉ chấp nhận giải pháp hợp lệ nhưng giải pháp cuối không hợp lệ,
+        # thì quay lại giải pháp hợp lệ tốt nhất đã tìm thấy
+        if ((only_feasible) and (not validate.check_solution(self.problem, self.solution))):
             self.solution = feasible_saving
-            self.cur_cost = validate.compute_solution(self.problem,
-                                                    self.solution)
+            self.cur_cost = validate.compute_solution(self.problem, self.solution)
+
         return self.solution, self.cur_cost
 
 class NeighborOperator:

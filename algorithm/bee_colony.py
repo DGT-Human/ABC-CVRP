@@ -135,7 +135,7 @@ class BeeColony(Algorithm):
         solutions = [
             random_solution.generate_solution(
                 self.problem,
-                patience=100
+                patience=100 # số lần thử lại
             ) for _ in range(self.n_initials)
         ]
         
