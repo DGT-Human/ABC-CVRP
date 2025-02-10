@@ -6,7 +6,6 @@ from utils import validate
 def generate_solution(problem,
                       patience=50,
                       verbose=False) -> np.ndarray:
-    MAXIMUM_PENALTY = 10000000
     dists   = problem['dists']
     demands = problem['demands']
 
@@ -40,4 +39,5 @@ def generate_solution(problem,
         if validate.check_depots_sanity(solution):
             if validate.check_capacity_criteria(problem, solution):
                 break
+
     return solution
