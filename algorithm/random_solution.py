@@ -32,12 +32,12 @@ def generate_solution(problem,
             routes[np.argmin(route_dists)].append(random_loc) # chọn route (tuyến) có coef nhỏ nhất
             i_loc.remove(random_loc)
 
-        solution = [loc for route in routes for loc in route]
-        solution.append(0)
+        solution = [loc for route in routes for loc in route] # tạo thành 1 mảng từ nhiều xe
+        solution.append(0) # gán 0 ở cuối mảng trên để đúng ràng buộc xe về kho
         solution = np.array(solution, dtype=np.int32)
 
         if validate.check_depots_sanity(solution):
             if validate.check_capacity_criteria(problem, solution):
                 break
 
-    return solution
+    return solution  # trả về duy nhất 1 mảng ví dụ : [0,1,2,0,3,4,5,0,6,0]
