@@ -175,7 +175,7 @@ class BeeColony(Algorithm):
 
         # Đảm bảo tổng xác suất là 1
         probabilities = np.array(probabilities)
-        probabilities = probabilities / probabilities.sum()  # Chuẩn hóa xác suất
+        probabilities = probabilities / probabilities.sum()  # Chuẩn hóa xác suất  (Pi = Pi / Pi.sum())
 
         # Với mỗi ong quan sát
         for _ in range(self.n_onlookers):

@@ -58,7 +58,7 @@ class VRPGUI:
         input_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
 
         # Load benchmark button
-        ttk.Button(input_frame, text="Load Benchmark", command=self.load_benchmark).grid(row=0, column=0, padx=5,
+        ttk.Button(input_frame, text="Load File For Optimization", command=self.load_benchmark).grid(row=0, column=0, padx=5,
                                                                                          pady=5)
 
         # Generate initial solution button
@@ -84,15 +84,15 @@ class VRPGUI:
         self.epochs_var = tk.StringVar(value="400")
         ttk.Entry(param_frame, textvariable=self.epochs_var).grid(row=0, column=1, padx=5, pady=2)
 
-        ttk.Label(param_frame, text="Number of Initial Solutions:").grid(row=1, column=0, padx=5, pady=2)
+        ttk.Label(param_frame, text="Number of Employees Bees:").grid(row=1, column=0, padx=5, pady=2)
         self.initials_var = tk.StringVar(value="40")
         ttk.Entry(param_frame, textvariable=self.initials_var).grid(row=1, column=1, padx=5, pady=2)
 
-        ttk.Label(param_frame, text="Number of Onlookers:").grid(row=2, column=0, padx=5, pady=2)
+        ttk.Label(param_frame, text="Number of Onlookers Bees:").grid(row=2, column=0, padx=5, pady=2)
         self.onlookers_var = tk.StringVar(value="20")
         ttk.Entry(param_frame, textvariable=self.onlookers_var).grid(row=2, column=1, padx=5, pady=2)
 
-        ttk.Label(param_frame, text="Search Limit:").grid(row=3, column=0, padx=5, pady=2)
+        ttk.Label(param_frame, text="Search Limit For Employees Bees:").grid(row=3, column=0, padx=5, pady=2)
         self.search_limit_var = tk.StringVar(value="10")
         ttk.Entry(param_frame, textvariable=self.search_limit_var).grid(row=3, column=1, padx=5, pady=2)
 
@@ -281,58 +281,78 @@ class VRPGUI:
         benchmark_frame = ttk.Frame(self.notebook)
         self.notebook.add(benchmark_frame, text="Benchmark")
 
-        # Create input frame to group controls together
-        input_frame = ttk.Frame(benchmark_frame)
-        input_frame.grid(row=0, column=0, columnspan=3, sticky='w', padx=3, pady=3)
+        # Input Section
+        input_frame = ttk.LabelFrame(benchmark_frame, text="Benchmark Settings", padding="10")
+        input_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        # Group the input controls closer together
-        ttk.Label(input_frame, text="Benchmark Folder:").grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
+        ttk.Label(input_frame, text="Benchmark Folder:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
         self.benchmark_folder_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.benchmark_folder_var, width=50).grid(row=0, column=1, padx=2, pady=2)
-        ttk.Button(input_frame, text="Browse", command=self.browse_benchmark_folder).grid(row=0, column=2, padx=2,
-                                                                                          pady=2)
+        ttk.Entry(input_frame, textvariable=self.benchmark_folder_var, width=50).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(input_frame, text="Browse", command=self.browse_benchmark_folder).grid(row=0, column=2, padx=5,
+                                                                                          pady=5)
 
-        ttk.Label(input_frame, text="Number of Epochs:").grid(row=1, column=0, padx=2, pady=2, sticky=tk.W)
+        ttk.Label(input_frame, text="Number of Epochs:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
         self.benchmark_epochs_var = tk.StringVar(value="300")
-        ttk.Entry(input_frame, textvariable=self.benchmark_epochs_var, width=10).grid(row=1, column=1, padx=2, pady=2,
+        ttk.Entry(input_frame, textvariable=self.benchmark_epochs_var, width=10).grid(row=1, column=1, padx=5, pady=5,
                                                                                       sticky=tk.W)
 
-        ttk.Label(input_frame, text="Number of Onlookers:").grid(row=2, column=0, padx=2, pady=2, sticky=tk.W)
-        self.benchmark_onlookers_var = tk.StringVar(value="5")
-        ttk.Entry(input_frame, textvariable=self.benchmark_onlookers_var, width=10).grid(row=2, column=1, padx=2, pady=2,
-                                                                               sticky=tk.W)
+        ttk.Label(input_frame, text="Number of Employees Bees:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+        self.benchmark_employees_var = tk.StringVar()
+        self.employees_entry = ttk.Entry(input_frame, textvariable=self.benchmark_employees_var, width=10,
+                                         state='readonly')
+        self.employees_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Run button with reduced padding
-        ttk.Button(input_frame, text="Run Benchmark", command=self.run_benchmark).grid(row=3, column=0, columnspan=3,
-                                                                                       padx=2, pady=5)
+        ttk.Label(input_frame, text="Number of Onlookers Bees:").grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
+        self.benchmark_onlookers_var = tk.StringVar()
+        self.onlookers_entry = ttk.Entry(input_frame, textvariable=self.benchmark_onlookers_var, width=10,
+                                         state='readonly')
+        self.onlookers_entry.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Create table frame
-        table_frame = ttk.Frame(benchmark_frame)
-        table_frame.grid(row=1, column=0, columnspan=3, sticky='nsew', padx=3, pady=3)
+        ttk.Label(input_frame, text="Search Limit:").grid(row=4, column=0, padx=5, pady=5, sticky=tk.W)
+        self.benchmark_search_limit_var = tk.StringVar()
+        self.search_limit_entry = ttk.Entry(input_frame, textvariable=self.benchmark_search_limit_var, width=10,
+                                            state='readonly')
+        self.search_limit_entry.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Benchmark table
-        self.benchmark_table = ttk.Treeview(table_frame, columns=(
+        ttk.Button(input_frame, text="Run Benchmark", command=self.run_benchmark).grid(row=5, column=0, columnspan=3,
+                                                                                       pady=10)
+
+        # Results Section
+        results_frame = ttk.LabelFrame(benchmark_frame, text="Benchmark Results", padding="10")
+        results_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.benchmark_table = ttk.Treeview(results_frame, columns=(
             "Benchmark", "Locations", "Trucks", "Capacity", "Optimal Cost",
             "ABC Cost", "ABC Time", "Error", "Feasible"),
-                                            show="headings")
+                                            show="headings", height=10)
 
-        # Configure headings
-        columns = ["Benchmark", "Locations", "Trucks", "Capacity", "Optimal Cost",
-                   "ABC Cost", "ABC Time", "Error", "Feasible"]
-        for col in columns:
+        for col in ["Benchmark", "Locations", "Trucks", "Capacity", "Optimal Cost",
+                    "ABC Cost", "ABC Time", "Error", "Feasible"]:
             self.benchmark_table.heading(col, text=col)
+            self.benchmark_table.column(col, anchor=tk.CENTER, width=100)
 
-        self.benchmark_table.grid(row=0, column=0, sticky='nsew')
+        self.benchmark_table.pack(fill=tk.BOTH, expand=True)
 
-        # Add vertical scrollbar
-        scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.benchmark_table.yview)
+        scrollbar = ttk.Scrollbar(results_frame, orient=tk.VERTICAL, command=self.benchmark_table.yview)
         self.benchmark_table.configure(yscroll=scrollbar.set)
-        scrollbar.grid(row=0, column=1, sticky='ns')
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Configure grid weights for proper expansion
-        benchmark_frame.grid_columnconfigure(0, weight=1)
-        table_frame.grid_columnconfigure(0, weight=1)
-        table_frame.grid_rowconfigure(0, weight=1)
+    def update_bee_parameters(self, num_locations):
+        self.benchmark_employees_var.set(str(num_locations))
+        self.benchmark_onlookers_var.set(str(num_locations // 2))
+        self.benchmark_search_limit_var.set(str(num_locations // 4))
+
+        self.employees_entry.config(state='normal')
+        self.onlookers_entry.config(state='normal')
+        self.search_limit_entry.config(state='normal')
+
+        self.employees_entry.update()
+        self.onlookers_entry.update()
+        self.search_limit_entry.update()
+
+        self.employees_entry.config(state='readonly')
+        self.onlookers_entry.config(state='readonly')
+        self.search_limit_entry.config(state='readonly')
 
     def browse_benchmark_folder(self):
         folder_selected = filedialog.askdirectory()
@@ -342,7 +362,6 @@ class VRPGUI:
     def run_benchmark(self):
         benchmark_folder = self.benchmark_folder_var.get()
         n_epochs = int(self.benchmark_epochs_var.get())
-        n_onlookers = int(self.benchmark_onlookers_var.get())
 
         benchmark_files = glob.glob(f"{benchmark_folder}/*.vrp")
 
@@ -365,25 +384,18 @@ class VRPGUI:
         loading_window.update()
 
         info_dict = {
-            "benchmark": [],
-            "n_locations": [],
-            "n_trucks": [],
-            "capacity": [],
-            "optimal_cost": [],
-            "ABC_cost": [],
-            "ABC_time": [],
-            "is_feasible": [],
-            "error": [],
-            "abc_solution": [],
-            "abc_epochs": [],
-            "abc_employers": [],
-            "abc_onlookers": [],
-            "abc_search_limit": []
+            "benchmark": [], "n_locations": [], "n_trucks": [], "capacity": [], "optimal_cost": [],
+            "ABC_cost": [], "ABC_time": [], "is_feasible": [], "error": [], "abc_solution": [],
+            "abc_epochs": [], "abc_employers": [], "abc_onlookers": [], "abc_search_limit": []
         }
 
         for i, benchmark_file in enumerate(benchmark_files):
             problem = tools.get_problem(benchmark_file)
             bench_name = os.path.basename(benchmark_file)
+
+            # Cập nhật giá trị ong thợ, ong quan sát và search limit dựa trên số lượng vị trí
+            num_locations = problem["n_locations"]
+            self.update_bee_parameters(num_locations)
 
             self.load_info_text.insert(tk.END, f"#{i} {bench_name} ...\n")
             self.load_info_text.update_idletasks()
@@ -391,9 +403,9 @@ class VRPGUI:
             ABC = bee_colony.BeeColony(problem)
             ABC.set_params(
                 n_epoch=n_epochs,
-                n_initials=problem["n_locations"],
-                n_onlookers=n_onlookers,
-                search_limit=problem["n_locations"]
+                n_initials=num_locations,
+                n_onlookers=num_locations // 2,
+                search_limit=num_locations // 4
             )
 
             start_time = datetime.now()
