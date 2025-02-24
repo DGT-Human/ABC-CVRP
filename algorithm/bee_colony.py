@@ -1,6 +1,8 @@
 import random
 import numpy as np
 from tqdm import tqdm_notebook
+
+from algorithm.greedy import GreedyCVRP
 from utils import solution_handler, validate
 from algorithm import local_search, random_solution
 from algorithm.base import Algorithm
@@ -136,19 +138,23 @@ class BeeColony(Algorithm):
         return self._get_best_solution(solutions, fitnesses)
 
     def _initialize_population(self):
-        """Khởi tạo quần thể giải pháp ban đầu."""
-        solutions = [
-            random_solution.generate_solution(
-                self.problem,
-                patience=100 # số lần thử lại
-            ) for _ in range(self.n_initials)
-        ]
-        
-        fitnesses = [
-            self.fitness(self.problem, solution)
-            for solution in solutions
-        ]
-        
+        """Khởi tạo quần thể giải pháp ban đầu với 50% Greedy và 50% Random."""
+        solutions = []
+        n_greedy = self.n_initials // 2  # 50% số ong thợ dùng thuật toán Greedy
+        n_random = self.n_initials - n_greedy  # 50% số ong thợ dùng thuật toán ngẫu nhiên
+
+        greedy_solution = GreedyCVRP.greedy_cvrp(self.problem)
+        # Khởi tạo 50% giải pháp đầu tiên bằng thuật toán Greedy
+        for _ in range(n_greedy):
+            solutions.append(greedy_solution)
+
+        # Khởi tạo 50% còn lại bằng thuật toán Random
+        for _ in range(n_random):
+            solutions.append(random_solution.generate_solution(self.problem, patience=50))
+
+        # Đánh giá fitness của quần thể
+        fitnesses = [self.fitness(self.problem, solution) for solution in solutions]
+
         return {
             'solutions': solutions,
             'fitnesses': fitnesses

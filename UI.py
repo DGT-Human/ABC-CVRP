@@ -12,6 +12,7 @@ from tqdm import tqdm
 import glob
 import os
 from algorithm import random_solution
+from algorithm.greedy import GreedyCVRP
 
 class VRPGUI:
     def __init__(self, root):
@@ -62,10 +63,7 @@ class VRPGUI:
                                                                                          pady=5)
 
         # Generate initial solution button
-        ttk.Button(input_frame, text="Generate Initial Solution", command=self.generate_initial_solution).grid(row=1,
-                                                                                                               column=0,
-                                                                                                               padx=5,
-                                                                                                               pady=5)
+        ttk.Button(input_frame, text="Run Greedy Algorithm", command=self.run_greedy).grid(row=1, column=0, padx=5, pady=5)
 
         ttk.Button(input_frame, text="Show File Content", command=self.show_file_content).grid(row=2, column=0, padx=5,
                                                                                                pady=5)
@@ -109,11 +107,11 @@ class VRPGUI:
         output_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
 
         # Results labels
-        self.initial_cost_label = ttk.Label(output_frame, text="Initial Cost: -")
-        self.initial_cost_label.grid(row=0, column=0, padx=5, pady=2)
+        self.greedy_cost_label = ttk.Label(output_frame, text="Greedy Cost: -")
+        self.greedy_cost_label.grid(row=0, column=0, padx=5, pady=2)
 
-        self.initial_feasible_label = ttk.Label(output_frame, text="Initial Feasible: -")
-        self.initial_feasible_label.grid(row=1, column=0, padx=5, pady=2)
+        self.greedy_feasible_label = ttk.Label(output_frame, text="Greedy Feasible: -")
+        self.greedy_feasible_label.grid(row=1, column=0, padx=5, pady=2)
 
         self.abc_cost_label = ttk.Label(output_frame, text="ABC Cost: -")
         self.abc_cost_label.grid(row=2, column=0, padx=5, pady=2)
@@ -175,19 +173,30 @@ class VRPGUI:
             self.file_label.config(text=filename.split("/")[-1])
             self.update_visualization()
 
-    def generate_initial_solution(self):
+    def run_greedy(self):
         if self.problem is None:
             messagebox.showerror("Error", "Please load a benchmark first!")
             return
 
-        self.initial_solution = random_solution.generate_solution(self.problem, verbose=False)
-        initial_cost = common.compute_solution(self.problem, self.initial_solution)
-        is_feasible = common.check_solution(self.problem, self.initial_solution)
+        try:
+            # Chạy thuật toán GreedyCVRP
+            greedy_solution = GreedyCVRP.greedy_cvrp(self.problem)
 
-        self.initial_cost_label.config(text=f"Initial Cost: {initial_cost:.2f}")
-        self.initial_feasible_label.config(text=f"Initial Feasible: {is_feasible}")
+            # Tính toán chi phí và kiểm tra tính hợp lệ của giải pháp
+            greedy_cost = common.compute_solution(self.problem, greedy_solution)
+            is_feasible = common.check_solution(self.problem, greedy_solution)
 
-        self.update_visualization()
+            # Cập nhật kết quả lên giao diện
+            self.greedy_cost_label.config(text=f"Greedy Cost: {greedy_cost:.2f}")
+            self.greedy_feasible_label.config(text=f"Greedy Feasible: {is_feasible}")
+
+            # Cập nhật trực quan hóa giải pháp Greedy
+            self.greedy_solution = greedy_solution
+            self.update_visualization()
+            self.update_routes()
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     def solve_vrp(self):
         if self.problem is None:
@@ -254,9 +263,9 @@ class VRPGUI:
         self.ax2.clear()
 
         if self.problem is not None:
-            if self.initial_solution is not None:
-                visualize.visualize_problem(self.problem, self.initial_solution, ax=self.ax1)
-                self.ax1.set_title("Initial Solution")
+            if self.greedy_solution is not None:
+                visualize.visualize_problem(self.problem, self.greedy_solution, ax=self.ax1)
+                self.ax1.set_title("Greedy Solution")
 
             if self.abc_solution is not None:
                 visualize.visualize_problem(self.problem, self.abc_solution, ax=self.ax2)
@@ -264,17 +273,25 @@ class VRPGUI:
 
             self.canvas.draw()
 
-
     def update_routes(self):
-        if self.abc_solution is not None:
-            routes = common.get_routes(self.abc_solution)
-            self.routes_text.delete(1.0, tk.END)
+        self.routes_text.delete(1.0, tk.END)  # Xóa nội dung cũ
 
+        if self.greedy_solution is not None:
+            routes = common.get_routes(self.greedy_solution)
+            self.routes_text.insert(tk.END, "Greedy Solution Routes:\n")
             for i, route in enumerate(routes, start=1):
                 route_str = f"Route #{i}: " + " → ".join(str(node) for node in route) + "\n"
                 self.routes_text.insert(tk.END, route_str)
-        else:
-            self.routes_text.delete(1.0, tk.END)
+            self.routes_text.insert(tk.END, "\n")  # Thêm dòng trống để phân biệt
+
+        if self.abc_solution is not None:
+            routes = common.get_routes(self.abc_solution)
+            self.routes_text.insert(tk.END, "ABC Solution Routes:\n")
+            for i, route in enumerate(routes, start=1):
+                route_str = f"Route #{i}: " + " → ".join(str(node) for node in route) + "\n"
+                self.routes_text.insert(tk.END, route_str)
+
+        if self.greedy_solution is None and self.abc_solution is None:
             self.routes_text.insert(tk.END, "No solution available.")
 
     def create_benchmark_tab(self):
