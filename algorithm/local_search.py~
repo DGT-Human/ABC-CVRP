@@ -70,20 +70,20 @@ class LocalSearch(Algorithm):
 
         return self.solution, self.cur_cost
 
-
 class NeighborOperator:
 
     def __init__(self):
         self.operators = {
-            1: self.random_swap,  # Hoán đổi vị trí hai điểm bất kỳ trong lộ trình.
-            2: self.random_swap_sub,  # Hoán đổi hai đoạn con (subsequences) trong lộ trình.
-            3: self.random_insert,  # Di chuyển một điểm từ vị trí này sang vị trí khác.
-            4: self.random_insert_sub,  # Di chuyển một đoạn con từ vị trí này sang vị trí khác.
-            5: self.random_reversing,  # Đảo ngược thứ tự một đoạn con trong lộ trình.
-            6: self.random_swap_sub_reverse,  # Hoán đổi hai đoạn con và đảo ngược chúng.
-            7: self.random_insert_sub_reverse  # Di chuyển một đoạn con đến vị trí mới và đảo ngược nó.
-        }
+                          1: self.random_swap, # Hoán đổi vị trí hai điểm bất kỳ trong lộ trình.
+                          2: self.random_swap_sub, # Hoán đổi hai đoạn con (subsequences) trong lộ trình.
+                          3: self.random_insert, #Di chuyển một điểm từ vị trí này sang vị trí khác.
+                          4: self.random_insert_sub,#Di chuyển một đoạn con từ vị trí này sang vị trí khác.
+                          5: self.random_reversing,#Đảo ngược thứ tự một đoạn con trong lộ trình.
+                          6: self.random_swap_sub_reverse,# Hoán đổi hai đoạn con và đảo ngược chúng.
+                          7: self.random_insert_sub_reverse# Di chuyển một đoạn con đến vị trí mới và đảo ngược nó.
+                          }
         pass
+
 
     def random_operator(self, _solution, patience=10):
         operators = list(self.operators)
@@ -96,12 +96,11 @@ class NeighborOperator:
     @staticmethod
     def random_swap(_solution, patience=10):
         solution = copy(_solution)
-        sol_len = len(solution)
+        sol_len  = len(solution)
         while patience > 0:
-            i, j = random.sample(range(1, sol_len - 1),
-                                 2)  # chọn ngẫu nhiên 2 điểm, lấy từ điểm 1 đến điểm n-1 tránh lấy điểm 0
-            if i != j and solution[i] != 0 and solution[j] != 0:  # đẩm bảo 2 điểm không giống nhau và khác 0
-                solution[i], solution[j] = copy(solution[j]), copy(solution[i])  # hoán đổi 2 điểm
+            i, j = random.sample(range(1, sol_len-1), 2) # chọn ngẫu nhiên 2 điểm, lấy từ điểm 1 đến điểm n-1 tránh lấy điểm 0
+            if i != j and solution[i] != 0 and solution[j] != 0: # đẩm bảo 2 điểm không giống nhau và khác 0
+                solution[i], solution[j] = copy(solution[j]), copy(solution[i]) # hoán đổi 2 điểm
                 break
             patience -= 1
         return solution
@@ -109,14 +108,12 @@ class NeighborOperator:
     @staticmethod
     def random_swap_sub(_solution, patience=10):
         solution = copy(_solution)
-        sol_len = len(solution)
+        sol_len  = len(solution)
         while patience > 0:
-            k = random.choice(range(2, 7))  # chọn ngẫu nhiên trong độ dài từ 2 đến 6
-            i, j = random.sample(range(1, sol_len - k - 1), 2)  # chọn 2 vị trí bắt đầu trong 2 đoạn con
-            if abs(i - j) > k and solution[i] != 0 and solution[
-                j] != 0:  # Đảm bảo hai đoạn không quá gần nhau và không chứa depot.
-                solution[i:i + k], solution[j:j + k] = copy(solution[j:j + k]), copy(
-                    solution[i:i + k])  # hoán đổi 2 đoaạn
+            k = random.choice(range(2, 7)) #chọn ngẫu nhiên trong độ dài từ 2 đến 6
+            i, j = random.sample(range(1, sol_len-k-1), 2) # chọn 2 vị trí bắt đầu trong 2 đoạn con
+            if abs(i-j)>k and solution[i] != 0 and solution[j] != 0: #Đảm bảo hai đoạn không quá gần nhau và không chứa depot.
+                solution[i:i+k], solution[j:j+k] = copy(solution[j:j+k]), copy(solution[i:i+k]) #hoán đổi 2 đoaạn
 
                 # there shouldn`t be several depots in a row for example [0, 0,.. ]
                 if validate.check_depots_sanity(solution):
@@ -128,17 +125,17 @@ class NeighborOperator:
     @staticmethod
     def random_insert(_solution, patience=10):
         solution = copy(_solution)
-        sol_len = len(solution)
+        sol_len  = len(solution)
         while patience > 0:
-            i, j = random.sample(range(1, sol_len - 1), 2)  # chọn 2 vị trí i j trong lộ trình
-            if i != j and solution[i] != 0 and solution[j] != 0:  # khác nhau và khác 0
+            i, j = random.sample(range(1, sol_len-1), 2) #chọn 2 vị trí i j trong lộ trình
+            if i != j and solution[i] != 0 and solution[j] != 0: # khác nhau và khác 0
                 i, j = copy(min(i, j)), copy(max(i, j))
-                if solution[j + 1] != 0 or solution[j - 1] != 0:
+                if solution[j+1] != 0 or solution[j-1]!=0:
                     solution[:i] = _solution[:i]
-                    solution[i] = _solution[j]
-                    solution[i + 1:j + 1] = _solution[i:j]
-                    solution[j + 1:] = _solution[j + 1:]
-                    # di chuyeern i đến j
+                    solution[i]  = _solution[j]
+                    solution[i+1:j+1] = _solution[i:j]
+                    solution[j+1:]    = _solution[j+1:]
+                    #di chuyeern i đến j
                     break
             patience -= 1
 
@@ -147,25 +144,23 @@ class NeighborOperator:
     @staticmethod
     def random_insert_sub(_solution, patience=10):
         solution = copy(_solution)
-        sol_len = len(solution)
+        sol_len  = len(solution)
         while patience > 0:
             k = random.choice(range(2, 7))
-            i, j = random.sample(range(1, sol_len - k - 1),
-                                 2)  # Chọn một đoạn có độ dài từ 2-6 và hai vị trí khác nhau trong lộ trình.
-            if abs(i - j) <= k:
+            i, j = random.sample(range(1, sol_len-k-1), 2)#Chọn một đoạn có độ dài từ 2-6 và hai vị trí khác nhau trong lộ trình.
+            if abs(i-j) <= k:
                 continue
             else:
                 i, j = copy(min(i, j)), copy(max(i, j))
-                solution[:i] = _solution[:i]  # từ điểm đầu tiên tới điểm vị trí thứ i
-                solution[i:i + k] = _solution[j:j + k]  # từ vị trí thứ i + k = vị trí thứ j + k
-                solution[i + k:j + k] = _solution[
-                                        i:j]  # vị trí thứ i + k tới vị trí thứ j + k bằng vị trí i j (ở giữa khoảng đã cắt)
-                solution[j + k:] = _solution[j + k:]
+                solution[:i] = _solution[:i] # từ điểm đầu tiên tới điểm vị trí thứ i
+                solution[i:i+k]  = _solution[j:j+k] # từ vị trí thứ i + k = vị trí thứ j + k
+                solution[i+k:j+k] = _solution[i:j] # vị trí thứ i + k tới vị trí thứ j + k bằng vị trí i j (ở giữa khoảng đã cắt)
+                solution[j+k:]  = _solution[j+k:]
                 # [0, 1, 2, 6, 8, 0, 3, 4, 5, 0]
-                # [0, 3, 4, 1, 2, 6, 8, 0, 5, 0] j = 6, i = 1, k = 2
+                # [1, 2, 6, 8, 0, 3, 4, 5] j = 5, i = 1, k = 2
                 # [1, 2,
 
-                # Di chuyển đoạn con j:j+k đến vị trí i:i+k.
+                #Di chuyển đoạn con j:j+k đến vị trí i:i+k.
                 # there shouldn`t be several depots in a row for example [0, 0,.. ]
                 if validate.check_depots_sanity(solution):
                     break
@@ -176,13 +171,13 @@ class NeighborOperator:
     @staticmethod
     def random_reversing(_solution, patience=10):
         solution = copy(_solution)
-        sol_len = len(solution)
+        sol_len  = len(solution)
         while patience > 0:
-            i, j = random.sample(range(1, sol_len - 1), 2)
+            i, j = random.sample(range(1, sol_len-1), 2)
             if i != j:
-                i, j = copy(min(i, j)), copy(max(i, j))  # Chọn hai vị trí i, j và sắp xếp lại theo thứ tự i < j.
-                if solution[j + 1] != 0 and solution[i - 1] != 0:
-                    solution[i:j] = solution[i:j][::-1]  # Đảo ngược đoạn con i:j nếu không chạm vào depot.
+                i, j = copy(min(i, j)), copy(max(i, j)) #Chọn hai vị trí i, j và sắp xếp lại theo thứ tự i < j.
+                if  solution[j+1] != 0  and solution[i-1] != 0:
+                    solution[i:j] = solution[i:j][::-1] #Đảo ngược đoạn con i:j nếu không chạm vào depot.
                     break
             patience -= 1
         return solution
@@ -190,13 +185,13 @@ class NeighborOperator:
     @staticmethod
     def random_swap_sub_reverse(_solution, patience=10):
         solution = copy(_solution)
-        sol_len = len(solution)
+        sol_len  = len(solution)
         while patience > 0:
             k = random.choice(range(2, 7))
-            i, j = random.sample(range(1, sol_len - k - 1), 2)
-            if abs(i - j) > k and solution[i] != 0 and solution[j] != 0:
-                solution[i:i + k], solution[j:j + k] = copy(solution[j:j + k][::-1]), copy(
-                    solution[i:i + k][::-1])  # Hoán đổi hai đoạn con, đồng thời đảo ngược chúng.
+            i, j = random.sample(range(1, sol_len-k-1), 2)
+            if abs(i-j)>k and solution[i] != 0 and solution[j] != 0:
+                solution[i:i+k], solution[j:j+k] = copy(solution[j:j+k][::-1]), copy(solution[i:i+k][::-1]) #Hoán đổi hai đoạn con, đồng thời đảo ngược chúng.
+
 
                 # there shouldn`t be several depots in a row for example [0, 0,.. ]
                 if validate.check_depots_sanity(solution):
@@ -208,18 +203,17 @@ class NeighborOperator:
     @staticmethod
     def random_insert_sub_reverse(_solution, patience=10):
         solution = copy(_solution)
-        sol_len = len(solution)
+        sol_len  = len(solution)
         while patience > 0:
             k = random.choice(range(2, 7))
-            i, j = random.sample(range(1, sol_len - k - 1), 2)
-            if abs(i - j) <= k:
+            i, j = random.sample(range(1, sol_len-k-1), 2)
+            if abs(i-j) <= k:
                 continue
             i, j = copy(min(i, j)), copy(max(i, j))
             solution[:i] = _solution[:i]
-            solution[i:i + k] = _solution[j:j + k][
-                                ::-1]  # Di chuyển đoạn con j:j+k đến vị trí i:i+k, đồng thời đảo ngược nó.
-            solution[i + k:j + k] = _solution[i:j]
-            solution[j + k:] = _solution[j + k:]
+            solution[i:i+k]  = _solution[j:j+k][::-1] #Di chuyển đoạn con j:j+k đến vị trí i:i+k, đồng thời đảo ngược nó.
+            solution[i+k:j+k] = _solution[i:j]
+            solution[j+k:]  = _solution[j+k:]
 
             # there shouldn`t be several depots in a row for example [0, 0,.. ]
             if validate.check_depots_sanity(solution):
