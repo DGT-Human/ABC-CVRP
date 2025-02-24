@@ -356,10 +356,10 @@ class VRPGUI:
         self.benchmark_table.configure(yscroll=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    def update_bee_parameters(self, num_locations):
+    def update_bee_parameters(self, num_locations, n_epochs):
         self.benchmark_employees_var.set(str(num_locations))
         self.benchmark_onlookers_var.set(str(num_locations // 2))
-        self.benchmark_search_limit_var.set(str(num_locations // 4))
+        self.benchmark_search_limit_var.set(str(n_epochs // 2))
 
         self.employees_entry.config(state='normal')
         self.onlookers_entry.config(state='normal')
@@ -427,7 +427,8 @@ class VRPGUI:
             os.makedirs(solution_dir, exist_ok=True)
 
             num_locations = problem["n_locations"]
-            self.update_bee_parameters(num_locations)
+            n_epochs = int(self.benchmark_epochs_var.get())
+            self.update_bee_parameters(num_locations, n_epochs)
 
             self.load_info_text.insert(tk.END, f"Processing {bench_name}...\n")
             self.root.update_idletasks()
@@ -437,7 +438,7 @@ class VRPGUI:
                 n_epoch=n_epochs,
                 n_initials=num_locations,
                 n_onlookers=num_locations // 2,
-                search_limit=num_locations // 4
+                search_limit=n_epochs // 2
             )
 
             start_time = datetime.now()

@@ -1,7 +1,4 @@
-import random
 import numpy as np
-from tqdm import tqdm_notebook
-
 from algorithm.greedy import GreedyCVRP
 from utils import solution_handler, validate
 from algorithm import local_search, random_solution
@@ -188,12 +185,12 @@ class BeeColony(Algorithm):
             # Chọn giải pháp dựa trên xác suất
             chosen_idx = np.random.choice(len(solutions), p=probabilities)
             solution = solutions[chosen_idx]
-            
+
             # Tìm giải pháp hàng xóm
             neighbor = neighbor_gen.random_operator(solution, patience=20)
             if not validate.check_capacity_criteria(self.problem, neighbor):
                 continue
-                
+
             # Đánh giá giải pháp mới
             neighbor_fitness = self.fitness(self.problem, neighbor)
             if neighbor_fitness > fitnesses[chosen_idx]:
@@ -202,7 +199,7 @@ class BeeColony(Algorithm):
                 counters[chosen_idx] = 0
             else:
                 counters[chosen_idx] += 1
-                
+
         return {
             'solutions': solutions,
             'fitnesses': fitnesses,
