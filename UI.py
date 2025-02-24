@@ -1,3 +1,5 @@
+import threading
+import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import matplotlib.pyplot as plt
@@ -8,10 +10,8 @@ import utils.solution_handler as tools
 import utils.validate as common
 import algorithm.bee_colony as bee_colony
 import utils.visualize as visualize
-from tqdm import tqdm
 import glob
 import os
-from algorithm import random_solution
 from algorithm.greedy import GreedyCVRP
 
 class VRPGUI:
@@ -50,6 +50,8 @@ class VRPGUI:
 
         # Create benchmark tab
         self.create_benchmark_tab()
+
+        self.create_comparison_tab()
         self.create_load_info_tab()
 
 
@@ -377,45 +379,58 @@ class VRPGUI:
             self.benchmark_folder_var.set(folder_selected)
 
     def run_benchmark(self):
+        """ Bắt đầu chạy benchmark trên một luồng riêng để giao diện không bị đứng """
+        self.benchmark_thread = threading.Thread(target=self.run_benchmark_thread)
+        self.benchmark_thread.start()
+
+    def run_benchmark_thread(self):
+        """ Thực hiện chạy benchmark trên một luồng riêng và hiển thị tiến trình """
         benchmark_folder = self.benchmark_folder_var.get()
         n_epochs = int(self.benchmark_epochs_var.get())
 
         benchmark_files = glob.glob(f"{benchmark_folder}/*.vrp")
+        total_files = len(benchmark_files)
 
-        # Xóa nội dung cũ trong khung văn bản
-        self.load_info_text.delete(1.0, tk.END)
+        if total_files == 0:
+            messagebox.showerror("Error", "No VRP files found in the selected folder!")
+            return
 
-        # Tạo cửa sổ loading
-        loading_window = tk.Toplevel(self.root)
-        loading_window.title("Loading...")
+        # **Tạo cửa sổ tiến trình**
+        progress_window = tk.Toplevel(self.root)
+        progress_window.title("Optimization Progress")
+        progress_label = ttk.Label(progress_window, text="Initializing benchmark...")
+        progress_label.pack(pady=5)
 
-        # Tạo tiến trình thanh
-        progress_var = tk.DoubleVar()
-        progress_bar = ttk.Progressbar(loading_window, variable=progress_var, maximum=len(benchmark_files))
-        progress_bar.pack(fill=tk.X, padx=10, pady=10)
+        progress_bar = ttk.Progressbar(progress_window, length=400, mode='determinate')
+        progress_bar.pack(padx=10, pady=5)
 
-        # Tạo nhãn thông báo
-        loading_label = ttk.Label(loading_window, text="Running benchmark...")
-        loading_label.pack(padx=10, pady=10)
+        progress_window.update()
 
-        loading_window.update()
+        def update_progress(current, total):
+            """ Cập nhật giao diện tiến trình """
+            percent = int((current / total) * 100)
+            progress_label.config(text=f"Optimizing: {percent}% | {current}/{total}")
+            progress_bar["value"] = percent
+            progress_window.update_idletasks()
 
         info_dict = {
             "benchmark": [], "n_locations": [], "n_trucks": [], "capacity": [], "optimal_cost": [],
-            "ABC_cost": [], "ABC_time": [], "is_feasible": [], "error": [], "abc_solution": [],
-            "abc_epochs": [], "abc_employers": [], "abc_onlookers": [], "abc_search_limit": []
+            "ABC_cost": [], "ABC_time": [], "is_feasible": [], "error": []
         }
 
         for i, benchmark_file in enumerate(benchmark_files):
             problem = tools.get_problem(benchmark_file)
             bench_name = os.path.basename(benchmark_file)
 
-            # Cập nhật giá trị ong thợ, ong quan sát và search limit dựa trên số lượng vị trí
+            dataset_name = os.path.basename(os.path.normpath(benchmark_folder))
+            solution_dir = os.path.join("data/solutions", dataset_name)
+            os.makedirs(solution_dir, exist_ok=True)
+
             num_locations = problem["n_locations"]
             self.update_bee_parameters(num_locations)
 
-            self.load_info_text.insert(tk.END, f"#{i} {bench_name} ...\n")
-            self.load_info_text.update_idletasks()
+            self.load_info_text.insert(tk.END, f"Processing {bench_name}...\n")
+            self.root.update_idletasks()
 
             ABC = bee_colony.BeeColony(problem)
             ABC.set_params(
@@ -426,17 +441,28 @@ class VRPGUI:
             )
 
             start_time = datetime.now()
-            abc_solution = ABC.solve()
+
+            # **Cập nhật tiến trình khi chạy**
+            abc_solution = ABC.solve(callback=lambda x, y, z, w: update_progress(x, y))
+
             end_time = (datetime.now() - start_time).total_seconds()
 
             abc_cost = common.compute_solution(problem, abc_solution)
             is_feasible = common.check_solution(problem, abc_solution)
             error = (abc_cost - problem["optimal"]) / problem["optimal"]
 
-            self.load_info_text.insert(tk.END,
-                                       f"epoch: {ABC.n_epoch} initials: {ABC.n_initials} search_limit: {ABC.search_limit}\n")
-            self.load_info_text.update_idletasks()
+            # **Lưu kết quả vào file .sol**
+            solution_filename = os.path.join(solution_dir, f"{bench_name}.sol")
+            with open(solution_filename, "w") as sol_file:
+                routes = common.get_routes(abc_solution)
+                for j, route in enumerate(routes, start=1):
+                    sol_file.write(f"Route #{j}: {' '.join(map(str, route))}\n")
+                sol_file.write(f"Cost {abc_cost:.2f}\n")
 
+            self.load_info_text.insert(tk.END, f"Saved solution to {solution_filename}\n")
+            self.root.update_idletasks()
+
+            # **Lưu dữ liệu vào dict**
             info_dict["benchmark"].append(bench_name)
             info_dict["n_locations"].append(problem["n_locations"])
             info_dict["n_trucks"].append(problem["n_trucks"])
@@ -446,24 +472,26 @@ class VRPGUI:
             info_dict["ABC_time"].append(end_time)
             info_dict["is_feasible"].append(is_feasible)
             info_dict["error"].append(error)
-            info_dict["abc_solution"].append(abc_solution)
-            info_dict["abc_epochs"].append(ABC.n_epoch)
-            info_dict["abc_employers"].append(ABC.n_initials)
-            info_dict["abc_onlookers"].append(ABC.n_onlookers)
-            info_dict["abc_search_limit"].append(ABC.search_limit)
 
-            # Cập nhật tiến trình thanh
-            progress_var.set(i + 1)
-            loading_window.update_idletasks()
+            # **Cập nhật tiến trình**
+            update_progress(i + 1, total_files)
 
-        # Đóng cửa sổ loading
-        loading_window.destroy()
+        # **Hoàn tất, cập nhật giao diện**
+        progress_label.config(text="Benchmark completed!")
+        self.root.update()
 
-        # Xóa các hàng cũ trong bảng
+        # Đợi 1 giây rồi đóng cửa sổ tiến trình
+        time.sleep(1)
+        progress_window.destroy()
+
+        # **Gọi cập nhật bảng trên giao diện**
+        self.root.after(0, self.update_benchmark_table, info_dict)
+
+    def update_benchmark_table(self, info_dict):
+        """ Cập nhật bảng Benchmark trên giao diện chính sau khi hoàn thành """
         for row in self.benchmark_table.get_children():
             self.benchmark_table.delete(row)
 
-        # Thêm các hàng mới vào bảng
         for i in range(len(info_dict["benchmark"])):
             self.benchmark_table.insert("", tk.END, values=(
                 info_dict["benchmark"][i],
@@ -745,6 +773,124 @@ class VRPGUI:
         canvas = FigureCanvasTkAgg(fig, master=stability_window)
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def create_comparison_tab(self):
+        comparison_tab = ttk.Frame(self.notebook)
+        self.notebook.add(comparison_tab, text="Comparison")
+
+        # Frame chứa input thư mục
+        input_frame = ttk.LabelFrame(comparison_tab, text="Benchmark Folder", padding="10")
+        input_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        ttk.Label(input_frame, text="Select Folder:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        self.folder_var = tk.StringVar()
+        ttk.Entry(input_frame, textvariable=self.folder_var, width=50).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(input_frame, text="Browse", command=self.browse_folder).grid(row=0, column=2, padx=5, pady=5)
+
+        ttk.Label(input_frame, text="Number of Iterations:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        self.iterations_var = tk.StringVar(value="400")
+        ttk.Entry(input_frame, textvariable=self.iterations_var, width=10).grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Button(input_frame, text="Run", command=self.run_batch_comparison).grid(row=2, column=0, columnspan=3,
+                                                                                    pady=10)
+
+        # Frame chứa bảng so sánh
+        comparison_frame = ttk.LabelFrame(comparison_tab, text="Algorithm Comparison", padding="10")
+        comparison_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.comparison_table = ttk.Treeview(comparison_frame, columns=("Benchmark", "Greedy Cost", "Bee Colony Cost"),
+                                             show="headings", height=5)
+        for col in ["Benchmark", "Greedy Cost", "Bee Colony Cost"]:
+            self.comparison_table.heading(col, text=col)
+            self.comparison_table.column(col, anchor=tk.CENTER, width=100)
+
+        self.comparison_table.pack(fill=tk.BOTH, expand=True)
+
+        # Frame chứa biểu đồ
+        chart_frame = ttk.LabelFrame(comparison_tab, text="Cost Comparison", padding="10")
+        chart_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.fig, self.ax = plt.subplots(figsize=(8, 5))
+        self.canvas_chart = FigureCanvasTkAgg(self.fig, master=chart_frame)
+        self.canvas_chart.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+    def browse_folder(self):
+        folder_selected = filedialog.askdirectory()
+        if folder_selected:
+            self.folder_var.set(folder_selected)
+
+    def run_batch_comparison(self):
+        folder = self.folder_var.get()
+        if not folder:
+            messagebox.showerror("Error", "Please select a folder first!")
+            return
+
+        benchmark_files = glob.glob(f"{folder}/*.vrp")
+        num_iterations = int(self.iterations_var.get())
+
+        results = []  # Lưu kết quả để xử lý sau
+
+        for file in benchmark_files:
+            self.problem = tools.get_problem(file)
+            num_workers = self.problem['n_locations']
+            num_onlookers = num_workers // 2
+            search_limit = num_workers // 4
+
+            bee_colony_solver = bee_colony.BeeColony(self.problem)
+            bee_colony_solver.set_params(n_epoch=num_iterations, n_initials=num_workers, n_onlookers=num_onlookers,
+                                         search_limit=search_limit)
+
+            self.run_greedy()
+            self.solve_vrp()
+
+            if self.problem is not None:
+                greedy_cost = float(
+                    self.greedy_cost_label.cget("text").split(":")[-1]) if self.greedy_solution is not None else 0
+                abc_cost = float(
+                    self.abc_cost_label.cget("text").split(":")[-1]) if self.abc_solution is not None else 0
+                results.append((os.path.basename(file), greedy_cost, abc_cost))
+
+        self.update_comparison(results)  # Cập nhật sau khi chạy xong tất cả file
+
+    def update_comparison(self, results):
+        # Xóa dữ liệu cũ
+        for row in self.comparison_table.get_children():
+            self.comparison_table.delete(row)
+
+        benchmarks = []
+        greedy_costs = []
+        abc_costs = []
+
+        for filename, greedy_cost, abc_cost in results:
+            self.comparison_table.insert("", tk.END, values=(filename, greedy_cost, abc_cost))
+            benchmarks.append(filename)
+            greedy_costs.append(greedy_cost)
+            abc_costs.append(abc_cost)
+
+        # Vẽ biểu đồ sau khi tất cả dữ liệu đã được xử lý
+        self.ax.clear()
+
+        if results:
+            sorted_indices = sorted(range(len(greedy_costs)), key=lambda k: greedy_costs[k])
+            sorted_benchmarks = [benchmarks[i] for i in sorted_indices]
+            sorted_greedy_costs = [greedy_costs[i] for i in sorted_indices]
+            sorted_abc_costs = [abc_costs[i] for i in sorted_indices]
+
+            index = range(len(sorted_benchmarks))
+            width = 0.4
+
+            self.ax.bar([i - width / 2 for i in index], sorted_greedy_costs, width=width, color='blue', label='Greedy')
+            self.ax.bar([i + width / 2 for i in index], sorted_abc_costs, width=width, color='orange',
+                        label='Bee Colony')
+
+            self.ax.set_xticks(index)
+            self.ax.set_xticklabels(sorted_benchmarks, rotation=0, ha='center')
+            self.ax.set_ylim(bottom=0)
+            self.ax.set_title("Cost Comparison")
+            self.ax.set_ylabel("Cost")
+            self.ax.legend()
+
+        self.canvas_chart.draw()
 
 
 if __name__ == "__main__":
