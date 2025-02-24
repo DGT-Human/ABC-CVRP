@@ -13,6 +13,8 @@ import utils.visualize as visualize
 import glob
 import os
 from algorithm.greedy import GreedyCVRP
+import pandas as pd
+
 
 class VRPGUI:
     def __init__(self, root):
@@ -359,7 +361,7 @@ class VRPGUI:
     def update_bee_parameters(self, num_locations, n_epochs):
         self.benchmark_employees_var.set(str(num_locations))
         self.benchmark_onlookers_var.set(str(num_locations // 2))
-        self.benchmark_search_limit_var.set(str(n_epochs // 2))
+        self.benchmark_search_limit_var.set(str(n_epochs // 3))
 
         self.employees_entry.config(state='normal')
         self.onlookers_entry.config(state='normal')
@@ -438,7 +440,7 @@ class VRPGUI:
                 n_epoch=n_epochs,
                 n_initials=num_locations,
                 n_onlookers=num_locations // 2,
-                search_limit=n_epochs // 2
+                search_limit=n_epochs // 3
             )
 
             start_time = datetime.now()
@@ -487,6 +489,7 @@ class VRPGUI:
 
         # **Gọi cập nhật bảng trên giao diện**
         self.root.after(0, self.update_benchmark_table, info_dict)
+        self.save_benchmark_results_to_excel(info_dict)  # Tự động lưu vào Excel
 
     def update_benchmark_table(self, info_dict):
         """ Cập nhật bảng Benchmark trên giao diện chính sau khi hoàn thành """
@@ -835,7 +838,7 @@ class VRPGUI:
             self.problem = tools.get_problem(file)
             num_workers = self.problem['n_locations']
             num_onlookers = num_workers // 2
-            search_limit = num_workers // 4
+            search_limit = num_iterations // 3
 
             bee_colony_solver = bee_colony.BeeColony(self.problem)
             bee_colony_solver.set_params(n_epoch=num_iterations, n_initials=num_workers, n_onlookers=num_onlookers,
@@ -852,6 +855,7 @@ class VRPGUI:
                 results.append((os.path.basename(file), greedy_cost, abc_cost))
 
         self.update_comparison(results)  # Cập nhật sau khi chạy xong tất cả file
+        self.save_comparison_results_to_excel(results)
 
     def update_comparison(self, results):
         # Xóa dữ liệu cũ
@@ -892,6 +896,32 @@ class VRPGUI:
             self.ax.legend()
 
         self.canvas_chart.draw()
+
+    def save_benchmark_results_to_excel(self, info_dict):
+        """ Lưu kết quả benchmark vào file Excel """
+        df = pd.DataFrame(info_dict)  # Chuyển info_dict thành DataFrame
+
+        # Tự động lưu vào một file có timestamp
+        filename = f"benchmark_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        df.to_excel(filename, index=False)
+
+        print(f"📂 Kết quả benchmark đã được lưu vào {filename}")
+        messagebox.showinfo("Export Successful", f"Benchmark results saved to {filename}")
+
+    def save_comparison_results_to_excel(self, results):
+        """ Lưu kết quả so sánh Greedy vs ABC vào file Excel """
+        df = pd.DataFrame(results, columns=["Benchmark", "Greedy Cost", "ABC Cost"])
+
+        # Chọn vị trí lưu file
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
+        )
+
+        if filename:
+            df.to_excel(filename, index=False)
+            print(f"📂 Kết quả so sánh đã được lưu vào {filename}")
+            messagebox.showinfo("Export Successful", f"Comparison results saved to {filename}")
 
 
 if __name__ == "__main__":
