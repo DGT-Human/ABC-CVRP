@@ -25,6 +25,7 @@ class VRPGUI:
         self.problem = None
         self.initial_solution = None
         self.abc_solution = None
+        self.greedy_solution = None
 
         # Create notebook
         self.notebook = ttk.Notebook(root)
@@ -55,6 +56,7 @@ class VRPGUI:
 
         self.create_comparison_tab()
         self.create_load_info_tab()
+
 
 
     def create_input_frame(self):
@@ -95,7 +97,7 @@ class VRPGUI:
         ttk.Entry(param_frame, textvariable=self.onlookers_var).grid(row=2, column=1, padx=5, pady=2)
 
         ttk.Label(param_frame, text="Search Limit For Employees Bees:").grid(row=3, column=0, padx=5, pady=2)
-        self.search_limit_var = tk.StringVar(value="10")
+        self.search_limit_var = tk.StringVar(value="100")
         ttk.Entry(param_frame, textvariable=self.search_limit_var).grid(row=3, column=1, padx=5, pady=2)
 
         # Solve button
