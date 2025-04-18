@@ -1,5 +1,4 @@
 import numpy as np
-from algorithm.greedy import GreedyCVRP
 from utils import solution_handler, validate
 from algorithm import local_search, random_solution
 from algorithm.base import Algorithm
@@ -104,7 +103,7 @@ class BeeColony(Algorithm):
                     counters[i] += 1
 
             # Giai đoạn ong quan sát
-            onlooker_results = self._onlooker_bee_search(solutions, fitnesses, counters, searchers['neighbor'])
+            onlooker_results = self._onlooker_bee_search(solutions, fitnesses, counters, searchers['local'])
 
             solutions = onlooker_results['solutions']
             fitnesses = onlooker_results['fitnesses']
@@ -137,18 +136,8 @@ class BeeColony(Algorithm):
     def _initialize_population(self):
         """Khởi tạo quần thể giải pháp ban đầu với 50% Greedy và 50% Random."""
         solutions = []
-        n_greedy = self.n_initials // 2  # 50% số ong thợ dùng thuật toán Greedy
-        n_random = self.n_initials - n_greedy  # 50% số ong thợ dùng thuật toán ngẫu nhiên
-
-        greedy_solution = GreedyCVRP.greedy_cvrp(self.problem)
-        # Khởi tạo 50% giải pháp đầu tiên bằng thuật toán Greedy
-        for _ in range(n_greedy):
-            solutions.append(greedy_solution)
-
-        # Khởi tạo 50% còn lại bằng thuật toán Random
-        for _ in range(n_random):
-            solutions.append(random_solution.generate_solution(self.problem, patience=50))
-
+        for _ in range(self.n_initials):
+            solutions.append(random_solution.generate_solution(self.problem, patience=100))
         # Đánh giá fitness của quần thể
         fitnesses = [self.fitness(self.problem, solution) for solution in solutions]
 
@@ -170,7 +159,7 @@ class BeeColony(Algorithm):
             'improved': improved
         }
 
-    def _onlooker_bee_search(self, solutions, fitnesses, counters, neighbor_gen):
+    def _onlooker_bee_search(self, solutions, fitnesses, counters, searcher):
         """Ong quan sát tập trung tìm kiếm ở vùng có giải pháp tốt."""
         # Tính xác suất chọn mỗi giải pháp
         total_fitness = sum(fitnesses)
@@ -186,10 +175,13 @@ class BeeColony(Algorithm):
             chosen_idx = np.random.choice(len(solutions), p=probabilities)
             solution = solutions[chosen_idx]
 
-            # Tìm giải pháp hàng xóm
-            neighbor = neighbor_gen.random_operator(solution, patience=20)
-            if not validate.check_capacity_criteria(self.problem, neighbor):
-                continue
+            # # Tìm giải pháp hàng xóm
+            # neighbor = neighbor_gen.random_operator(solution, patience=20)
+            # if not validate.check_capacity_criteria(self.problem, neighbor):
+            #     continue
+            # Dùng searcher giống ong thợ
+            searcher.set_params(solution, n_iter=12)
+            neighbor, _ = searcher.solve(only_feasible=True)
 
             # Đánh giá giải pháp mới
             neighbor_fitness = self.fitness(self.problem, neighbor)
